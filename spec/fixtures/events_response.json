@@ -1,0 +1,144 @@
+{
+    "results": [
+        {
+            "id": 1,
+            "slug": "event",
+            "path": "/event",
+            "status": "published",
+            "site_slug": "getupstaging",
+            "name": "Event",
+            "headline": "Event",
+            "title": "Event - GetUp Showcase",
+            "excerpt": null,
+            "author_id": 2,
+            "published_at": "2013-06-18T08:27:33+10:00",
+            "external_id": null,
+            "tags": [],
+            "intro": "<p><strong>This is a sample event in your calendar. You can delete it from [calendar] &gt; Events &amp; subpages &gt; [event] &gt; Event settings &gt; Intro.</strong></p>",
+            "calendar_id": 1,
+            "contact": {
+                "name": "",
+                "phone": null,
+                "show_phone": true,
+                "email": "",
+                "show_email": true
+            },
+            "start_time": "2025-06-19T11:00:00+10:00",
+            "end_time": "2025-06-19T14:00:00+10:00",
+            "time_zone": "Pacific Time (US & Canada)",
+            "rsvp_form": {
+                "phone": "hidden",
+                "address": "hidden",
+                "allow_guests": true,
+                "accept_rsvps": true,
+                "gather_volunteers": false
+            },
+            "capacity": 0,
+            "show_guests": true,
+            "venue": {
+                "name": "Your HQ",
+                "address": {
+                    "address1": "123 Main St",
+                    "address2": "",
+                    "address3": null,
+                    "city": "Los Angeles",
+                    "county": "",
+                    "state": "CA",
+                    "country_code": "US",
+                    "zip": "90245",
+                    "lat": "33.917312",
+                    "lng": "-118.416297",
+                    "fips": null,
+                    "street_number": "123",
+                    "street_prefix": null,
+                    "street_name": "Main",
+                    "street_type": "St",
+                    "street_suffix": null,
+                    "unit_number": "",
+                    "zip4": null,
+                    "zip5": "90245",
+                    "sort_sequence": null,
+                    "delivery_point": null,
+                    "lot": null,
+                    "carrier_route": null
+                }
+            },
+            "autoresponse": {
+                "broadcaster_id": null,
+                "subject": "RSVP confirmation for Event",
+                "body": null
+            },
+            "shifts": []
+        },
+        {
+            "id": 2,
+            "slug": "event2",
+            "path": "/event2",
+            "status": "published",
+            "site_slug": "getupstaging",
+            "name": "Event2",
+            "headline": "Event2",
+            "title": "Event2 - GetUp Showcase",
+            "excerpt": null,
+            "author_id": 2,
+            "published_at": "2013-06-18T08:27:33+10:00",
+            "external_id": null,
+            "tags": [],
+            "intro": "<p><strong>This is a sample event in your calendar. You can delete it from [calendar] &gt; Events &amp; subpages &gt; [event] &gt; Event settings &gt; Intro.</strong></p>",
+            "calendar_id": 1,
+            "contact": {
+                "name": "",
+                "phone": null,
+                "show_phone": true,
+                "email": "",
+                "show_email": true
+            },
+            "start_time": "2025-06-19T11:00:00+10:00",
+            "end_time": "2025-06-19T14:00:00+10:00",
+            "time_zone": "Pacific Time (US & Canada)",
+            "rsvp_form": {
+                "phone": "hidden",
+                "address": "hidden",
+                "allow_guests": true,
+                "accept_rsvps": true,
+                "gather_volunteers": false
+            },
+            "capacity": 0,
+            "show_guests": true,
+            "venue": {
+                "name": "Your HQ",
+                "address": {
+                    "address1": "123 Main St",
+                    "address2": "",
+                    "address3": null,
+                    "city": "Los Angeles",
+                    "county": "",
+                    "state": "CA",
+                    "country_code": "US",
+                    "zip": "90245",
+                    "lat": "33.917312",
+                    "lng": "-118.416297",
+                    "fips": null,
+                    "street_number": "123",
+                    "street_prefix": null,
+                    "street_name": "Main",
+                    "street_type": "St",
+                    "street_suffix": null,
+                    "unit_number": "",
+                    "zip4": null,
+                    "zip5": "90245",
+                    "sort_sequence": null,
+                    "delivery_point": null,
+                    "lot": null,
+                    "carrier_route": null
+                }
+            },
+            "autoresponse": {
+                "broadcaster_id": null,
+                "subject": "RSVP confirmation for Event",
+                "body": null
+            },
+            "shifts": []
+        }
+    ]
+}

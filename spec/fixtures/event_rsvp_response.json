@@ -1,0 +1,43 @@
+{
+    "results": [
+        {
+            "id": 1,
+            "event_id": 1,
+            "person_id": 1,
+            "guests_count": 0,
+            "volunteer": null,
+            "private": null,
+            "canceled": false,
+            "attended": true,
+            "shift_ids": [],
+            "ticket_type": null,
+            "tickets_sold": 0
+        },
+        {
+            "id": 2,
+            "event_id": 1,
+            "person_id": 2,
+            "guests_count": 0,
+            "volunteer": null,
+            "private": null,
+            "canceled": false,
+            "attended": false,
+            "shift_ids": [],
+            "ticket_type": null,
+            "tickets_sold": 0
+        },
+        {
+            "id": 3,
+            "event_id": 2,
+            "person_id": 3,
+            "guests_count": 0,
+            "volunteer": null,
+            "private": null,
+            "canceled": false,
+            "attended": false,
+            "shift_ids": [],
+            "ticket_type": null,
+            "tickets_sold": 0
+        }
+    ]
+}

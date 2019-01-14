@@ -23,31 +23,49 @@ module IdentityNationBuilder
       api(:sites, :index, { per_page: 100 })['results']
     end
 
-    def self.sites_events
+    def self.sites_events(starting=DateTime.now())
       site_slugs = sites.map { |site| site['slug'] }
-      all_upcoming_events(site_slugs)
+      all_events(site_slugs, starting)
     end
 
     private
 
-    def self.all_upcoming_events(site_slugs)
+    def self.all_events(site_slugs, starting)
       $event_results = []
-      site_slugs.each do |slug|
-        $page = NationBuilder::Paginator.new(get_api_client, events(slug))
-        page_results = $page.body['results'].map { |result| result['site_slug'] = slug; result }
+      site_slugs.each do |site_slug|
+        $page = NationBuilder::Paginator.new(get_api_client, events(site_slug, starting))
+        page_results = $page.body['results'].map { |result| result['site_slug'] = site_slug; result }
         $event_results = $event_results + page_results
         loop do
           break unless $page.next?
           $page = $page.next
-          page_results = $page.body['results'].map { |result| result['site_slug'] = slug; result }
+          page_results = $page.body['results'].map { |result| result['site_slug'] = site_slug; result }
           $event_results = $event_results + page_results
         end
       end
       $event_results
     end
 
-    def self.events(slug)
-      api(:events, :index, { site_slug: slug, starting: Time.now(), per_page: 100 })
+    def self.events(site_slug, starting)
+      api(:events, :index, { site_slug: site_slug, starting: starting.strftime("%F"), per_page: 100 })
+    end
+
+    def self.all_event_rsvps(site_slug, event_id)
+      $event_rsvp_results = []
+      $page = NationBuilder::Paginator.new(get_api_client, event_rsvps(site_slug, event_id))
+      page_results = $page.body['results']
+      $event_rsvp_results = $event_rsvp_results + page_results
+      loop do
+        break unless $page.next?
+        $page = $page.next
+        page_results = $page.body['results']
+        $event_rsvp_results = $event_rsvp_results + page_results
+      end
+      $event_rsvp_results
+    end
+
+    def self.event_rsvps(site_slug, event_id)
+      api(:events, :rsvps, { site_slug: site_slug, id: event_id, per_page: 100 })
     end
 
     def self.find_or_create_person(member)
@@ -56,6 +74,10 @@ module IdentityNationBuilder
 
     def self.rsvp_person(site_slug, event_id, person)
       api(:events, :rsvp_create, { id: event_id, site_slug: site_slug, rsvp: { person_id: person['id'] } })
+    end
+
+    def self.person(people_id)
+      api(:people, :show, { id: people_id })["person"]
     end
 
     def self.find_or_create_list(tag)

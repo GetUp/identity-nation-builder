@@ -5,7 +5,50 @@ class Initial < ActiveRecord::Migration[4.2]
   enable_extension "btree_gin"
   enable_extension "btree_gist"
   enable_extension "intarray"
-  
+
+  create_table "event_rsvps", id: :serial, force: :cascade do |t|
+    t.integer "event_id", null: false
+    t.integer "member_id", null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.datetime "deleted_at"
+    t.boolean "attended"
+    t.index ["event_id"], name: "index_event_rsvps_on_event_id"
+    t.index ["member_id"], name: "index_event_rsvps_on_member_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.text "name"
+    t.datetime "start_time"
+    t.datetime "end_time"
+    t.text "description"
+    t.integer "campaign_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer "host_id"
+    t.integer "controlshift_event_id"
+    t.text "location"
+    t.float "latitude"
+    t.float "longitude"
+    t.integer "attendees"
+    t.integer "group_id"
+    t.integer "area_id"
+    t.text "image_url"
+    t.boolean "approved", default: false, null: false
+    t.boolean "invite_only", default: false, null: false
+    t.integer "max_attendees"
+    t.integer "external_id"
+    t.text "technical_type"
+    t.string "external_source"
+    t.string "external_subsource"
+    t.index ["area_id"], name: "index_events_on_area_id"
+    t.index ["campaign_id"], name: "index_events_on_campaign_id"
+    t.index ["external_id", "external_source", "external_subsource"], name: "index_events_on_external_source", unique: true
+    t.index ["external_id"], name: "index_events_on_external_id"
+    t.index ["host_id"], name: "index_events_on_host_id"
+    t.index ["technical_type"], name: "index_events_on_technical_type"
+  end
+
   create_table "contact_campaigns", id: :serial, force: :cascade do |t|
     t.text "name"
     t.integer "external_id"

@@ -134,7 +134,6 @@ class Member < ApplicationRecord
   end
 
   def self.upsert_member(hash, entry_point = '')
-
     ApplicationRecord.transaction do
       return upsert_member_raw(hash, entry_point)
     end
