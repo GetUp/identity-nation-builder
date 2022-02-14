@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     identity_nation_builder (2.1.0)
-      active_model_serializers (~> 0.10.7)
+      active_model_serializers
       nationbuilder-rb
       pg
       rails
@@ -244,7 +244,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  active_model_serializers (~> 0.10.7)
+  active_model_serializers
   byebug
   database_cleaner
   dotenv-rails
@@ -270,4 +270,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   2.1.4
+   2.2.22
