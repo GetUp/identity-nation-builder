@@ -2,8 +2,8 @@ source 'https://rubygems.org'
 
 gemspec
 gem 'rails'
-gem 'pg', '~> 0.18'
-gem 'active_model_serializers', '~> 0.10.7'
+gem 'pg'
+gem 'active_model_serializers'
 gem 'nationbuilder-rb', '~> 1.6.1'
 gem 'sidekiq', '~> 5.1.1'
 gem 'sidekiq-batch'
