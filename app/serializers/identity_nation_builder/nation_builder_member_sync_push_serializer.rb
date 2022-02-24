@@ -10,11 +10,13 @@ module IdentityNationBuilder
     end
 
     def phone
-      strip_country_code(@object.landline)
+      number = @object.phone_numbers.landline.first
+      strip_country_code(number.phone) if number
     end
 
     def mobile
-      strip_country_code(@object.mobile)
+      number = @object.phone_numbers.mobile.first
+      strip_country_code(number.phone) if number
     end
 
     private
