@@ -1,12 +1,12 @@
 source 'https://rubygems.org'
 
 gemspec
-gem 'rails'
+gem 'rails', '~> 6.1.0'
 gem 'pg'
 gem 'active_model_serializers'
 
 gem 'nationbuilder-rb', '~> 1.6.1'
-gem 'sidekiq', '~> 5.1.1'
+gem 'sidekiq'
 gem 'sidekiq-batch'
 gem 'sidekiq-limit_fetch'
 gem 'sidekiq-unique-jobs'
