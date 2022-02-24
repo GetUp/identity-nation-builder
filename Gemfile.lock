@@ -258,7 +258,7 @@ DEPENDENCIES
   factory_bot_rails
   faker
   identity_nation_builder!
-  nationbuilder-rb (~> 1.6.1)
+  nationbuilder-rb (~> 1.6.2)
   pg
   phony
   pry
