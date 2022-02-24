@@ -3,10 +3,8 @@ module IdentityNationBuilder
     attributes :id, :nationbuilder_id, :email, :phone, :mobile, :first_name, :last_name
 
     def nationbuilder_id
-      member_external_ids = member_external_ids ? member_external_ids.with_system('nation_builder') : nil
-      member_external_id = member_external_ids ? member_external_ids.first : nil
-      nationbuilder_id = member_external_ids ? member_external_id.external_id : nil
-      nationbuilder_id
+      id = @object.member_external_ids.with_system(SYSTEM_NAME).first
+      id.external_id if id
     end
 
     def phone
