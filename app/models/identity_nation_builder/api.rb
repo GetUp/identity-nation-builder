@@ -4,16 +4,19 @@ module IdentityNationBuilder
   class API
     def self.rsvp(site_slug, members, event_id, mark_as_attended=false, recruiter_id=nil)
       member_ids = members.map do |member|
+        identity_id = member[:id]
         member = member.except(:id, :nationbuilder_id)
         person = find_or_create_person(member)
         response = rsvp_person(site_slug, event_id, person, mark_as_attended, recruiter_id)
-        if person && !response.try(:[], 'rsvp') && mark_as_attended
+        if !response.try(:[], 'rsvp') && mark_as_attended
           pager = NationBuilder::Paginator.new(get_api_client, event_rsvps(site_slug, event_id))
           rsvp = pager.body['results'].select { |result| result['person_id'] == person['id'] }.first
           if rsvp && !rsvp['attended']
             update_rsvp(site_slug, rsvp, mark_as_attended)
           end
         end
+
+        { identity_id: identity_id, nationbuilder_id: person['id'] }
       end
       yield member_ids.length, member_ids
     end
@@ -32,21 +35,25 @@ module IdentityNationBuilder
     end
 
     def self.mark_as_attended_to_all_events_on_date(site_slug, members)
-      marked_records = 0
-      member_ids = members.map { |member| member[:id] }
-      rsvps_on_date = EventRsvp.where(member_id: member_ids)
+      rsvps_on_date = EventRsvp.where(member_id: members.map { |member| member[:id] })
                                 .joins(:event)
                                 .where('events.start_time::date = ?', Date.current)
                                 .where(attended: false)
+      member_ids = []
       rsvps_on_date.each do |rsvp|
         begin
           update_rsvp(rsvp.event.data['site_slug'], rsvp.data, true)
-          marked_records += 1
+          member_ids.append(
+            {
+              identity_id: rsvp.member.id,
+              nationbuilder_id: rsvp.data['person_id']
+            }
+          )
         rescue NationBuilder::ClientError => response
           raise unless response.message =~ /Record not found/i
         end
       end
-      yield marked_records, member_ids
+      yield member_ids.length, member_ids
     end
 
     def self.sites
