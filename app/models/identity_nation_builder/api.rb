@@ -162,7 +162,7 @@ module IdentityNationBuilder
     end
 
     def self.tag_list(list_id, tag)
-      api(:lists, :add_tag, { list_id: list_id, tag: URI.escape(tag) })
+      api(:lists, :add_tag, { list_id: list_id, tag: URI.encode_www_form_component(tag) })
     end
 
     def self.recruiters
