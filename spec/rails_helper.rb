@@ -53,13 +53,9 @@ RSpec.configure do |config|
   config.fixture_path = "#{Rails.root}/spec/fixtures"
 
   config.before(:suite) do
-    # Speed up tests by using :transaction
-    DatabaseCleaner.strategy = :transaction
-    # And clean initially using :truncation
-    DatabaseCleaner.clean_with(:truncation)
-    # Enable redis cleaning too (:truncation is the only option)
-    DatabaseCleaner[:redis].strategy = :truncation
-    # And clean initially
+    DatabaseCleaner[:active_record].strategy = :transaction
+    DatabaseCleaner[:active_record].clean_with(:truncation)
+    DatabaseCleaner[:redis].strategy = :deletion
     DatabaseCleaner[:redis].clean
   end
 
