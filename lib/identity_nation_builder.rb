@@ -209,7 +209,6 @@ module IdentityNationBuilder
     end
 
     recruiters = IdentityNationBuilder::API.recruiters
-    Sidekiq.redis { |r| r.set 'nationbuilder:recruiters', recruiters.to_json}
     yield(
       recruiters.size,
       recruiters,
