@@ -126,6 +126,10 @@ module IdentityNationBuilder
         external_id: nb_event["id"]
       )
 
+      if event.campaign == nil
+        event.campaign = Campaign.find(Settings.nation_builder.default_event_campaign_id)
+      end
+
       event.update!(
         name: nb_event['name'],
         start_time: nb_event['start_time'] && DateTime.parse(nb_event['start_time']),
