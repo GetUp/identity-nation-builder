@@ -34,7 +34,7 @@ module IdentityNationBuilder
           if sync_type === 'tag'
             member_ids.each do |member_id|
               member = Member.find(member_id[:identity_id])
-              member.update_external_id(SYSTEM_NAME, member_id[:nationbuilder_id], {sync_id: sync_id}) if member
+              member.update_external_id(SYSTEM_NAME, member_id[:nationbuilder_id])
             end
           end
 
