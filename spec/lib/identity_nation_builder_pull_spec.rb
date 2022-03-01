@@ -87,7 +87,7 @@ describe IdentityNationBuilder do
           IdentityNationBuilder.fetch_new_events(@sync_id) {}
           Event.update_all(updated_at: 3.days.ago)
           IdentityNationBuilder.fetch_new_events(@sync_id) {}
-          expect(Event.first.updated_at.to_date).to eq(Date.today)
+          expect(Event.first.updated_at.to_date).to eq(Time.now.utc.to_date)
         end
       end
 
