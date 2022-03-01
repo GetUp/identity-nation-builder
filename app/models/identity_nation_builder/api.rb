@@ -12,7 +12,13 @@ module IdentityNationBuilder
           pager = NationBuilder::Paginator.new(get_api_client, event_rsvps(site_slug, event_id))
           rsvp = pager.body['results'].select { |result| result['person_id'] == person['id'] }.first
           if rsvp && !rsvp['attended']
-            update_rsvp(site_slug, rsvp, mark_as_attended)
+            api(
+              :events, :rsvp_update, {
+                rsvp_id: rsvp['id'],
+                event_id: rsvp['event_id'],
+                site_slug: site_slug,
+                rsvp: { attended: mark_as_attended, person_id: rsvp['person_id'] }
+              })
           end
         end
 
@@ -31,28 +37,6 @@ module IdentityNationBuilder
       nationbuilder_ids = member_ids.map { |member| member[:nationbuilder_id] }
       add_people_list(list_id, nationbuilder_ids)
       tag_list(list_id, tag)
-      yield member_ids.length, member_ids
-    end
-
-    def self.mark_as_attended_to_all_events_on_date(site_slug, members)
-      rsvps_on_date = EventRsvp.where(member_id: members.map { |member| member[:id] })
-                                .joins(:event)
-                                .where('events.start_time::date = ?', Date.current)
-                                .where(attended: false)
-      member_ids = []
-      rsvps_on_date.each do |rsvp|
-        begin
-          update_rsvp(rsvp.event.data['site_slug'], rsvp.data, true)
-          member_ids.append(
-            {
-              identity_id: rsvp.member.id,
-              nationbuilder_id: rsvp.data['person_id']
-            }
-          )
-        rescue NationBuilder::ClientError => response
-          raise unless response.message =~ /Record not found/i
-        end
-      end
       yield member_ids.length, member_ids
     end
 
@@ -125,15 +109,6 @@ module IdentityNationBuilder
       rsvp_data[:attended] = true if attended
       rsvp_data[:recruiter_id] = recruiter_id if recruiter_id
       api(:events, :rsvp_create, { id: event_id, site_slug: site_slug, rsvp: rsvp_data })
-    end
-
-    def self.update_rsvp(site_slug, rsvp, mark_as_attended)
-      api(:events, :rsvp_update, {
-        rsvp_id: rsvp['id'],
-        event_id: rsvp['event_id'],
-        site_slug: site_slug,
-        rsvp: { attended: mark_as_attended, person_id: rsvp['person_id'] }
-      })
     end
 
     def self.person(people_id)

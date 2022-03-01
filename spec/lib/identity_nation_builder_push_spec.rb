@@ -16,14 +16,8 @@ describe IdentityNationBuilder do
           expect(IdentityNationBuilder.sync_type_item(external_system_params)).to eq(['test_tag'])
         end
       end
-
-      context 'with mark_as_attended_to_all_events_on_date' do
-        it 'returns correct sync item type' do
-          external_system_params = {'sync_type' => 'mark_as_attended_to_all_events_on_date', 'site_slug' => 'action'}
-          expect(IdentityNationBuilder.sync_type_item(external_system_params)).to eq([])
-        end
-      end
     end
+
     context 'with invalid parameters' do
       it 'returns no sync item type' do
         external_system_params = {'sync_type' => 'yada'}
@@ -95,23 +89,6 @@ describe IdentityNationBuilder do
             ])
           IdentityNationBuilder.push_in_batches(1, @members, external_system_params) do |batch_index, write_result_count|
             expect(write_result_count).to eq(@members.length)
-          end
-        end
-      end
-    end
-
-    context 'mark_as_attended_to_all_events_on_date' do
-      context 'with valid parameters' do
-        it 'yeilds write_result_count' do
-          external_system_params = JSON.generate({'sync_type' => 'mark_as_attended_to_all_events_on_date'})
-          expect(IdentityNationBuilder::API).to receive(:mark_as_attended_to_all_events_on_date).exactly(1).times.with(nil, instance_of(@members.class))
-.and_yield(
-            3, [
-              {identity_id: @members[0].id, nationbuilder_id: @members[0].id },
-              {identity_id: @members[1].id, nationbuilder_id: @members[1].id },
-            ])          
-          IdentityNationBuilder.push_in_batches(1, @members, external_system_params) do |batch_index, write_result_count|
-            expect(write_result_count).to eq(3)
           end
         end
       end

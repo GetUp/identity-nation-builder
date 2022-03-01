@@ -256,55 +256,6 @@ describe IdentityNationBuilder::API do
         end
       end
     end
-
-    describe '.mark_as_attended_to_all_events_on_date' do
-      let!(:nb_event_data) { { "id": 1, "event_id": 2, "person_id": 3 } }
-      let!(:member) { FactoryBot.create(:member) }
-      let!(:member_data) { { id: member.id } }
-      let!(:campaign) { Campaign.create!(name: "Test campaign") }
-      let!(:event) { Event.create!(name: "Event 1", campaign: campaign, external_id: 2, start_time: Time.now, data: { 'site_slug': 'test_slug' }) }
-      let!(:event_rsvp) { EventRsvp.create!(event: event, member: member, attended: false, data: nb_event_data) }
-      let!(:old_event) { Event.create!(name: "Event 2", campaign: campaign, external_id: 2, start_time: 5.days.ago) }
-      let!(:old_nb_event_data) { { "id": 8, "event_id": 9, "person_id": 3 } }
-      let!(:old_rsvp) { EventRsvp.create!(event: old_event, member: member, attended: false, data: nb_event_data) }
-      let!(:future_event) { Event.create!(name: "Event 3", campaign: campaign, external_id: 2, start_time: 1.days.since) }
-      let!(:future_nb_event_data) { { "id": 12, "event_id": 19, "person_id": 3 } }
-      let!(:future_rsvp) { EventRsvp.create!(event: future_event, member: member, attended: false, data: nb_event_data) }
-
-      it 'should mark the member as attened to any events on the specified date' do
-        rsvp_update_request = stub_request(:put, %r{sites/test_slug/pages/events/2/rsvps/1})
-          .with(body: /"attended":true.*"person_id":3/)
-          .to_return({
-            status: 200,
-            headers: { 'Content-Type' => 'application/json' },
-            body: {
-              rsvp: { id: 1, event_id: 2, person_id: 3, attended: false }
-            }.to_json
-          })
-        IdentityNationBuilder::API.mark_as_attended_to_all_events_on_date('test', [member_data]) { |length, members|
-          expect(length).to eq(1)
-          expect(members).to eq([{ identity_id: member.id, nationbuilder_id: 3 }])
-        }
-        expect(rsvp_update_request).to have_been_requested
-      end
-
-      it 'should skip rsvps that 404' do
-        rsvp_update_request = stub_request(:put, %r{pages/events/2/rsvps/1})
-          .with(body: /"attended":true.*"person_id":3/)
-          .to_return({
-            status: 404,
-            headers: { 'Content-Type' => 'application/json' },
-            body: {
-              "code":"not_found", "message":"Record not found"
-            }.to_json
-          })
-        IdentityNationBuilder::API.mark_as_attended_to_all_events_on_date(nil, [member_data]) { |length, members|
-          expect(length).to eq(0)
-          expect(members).to eq([])
-        }
-        expect(rsvp_update_request).to have_been_requested
-      end
-    end
   end
 
   describe '.recruiters' do

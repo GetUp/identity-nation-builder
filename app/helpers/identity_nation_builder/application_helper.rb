@@ -1,7 +1,10 @@
 module IdentityNationBuilder
   module ApplicationHelper
     def self.push_types_for_select
-      [["Event RSVP", :rsvp], ["Tag", :tag], ["Mark as attended to today's events", :mark_as_attended_to_all_events_on_date]]
+      [
+        ["Event RSVP", :rsvp],
+        ["Tag", :tag],
+      ]
     end
 
     def self.events_for_select
