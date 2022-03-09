@@ -13,6 +13,7 @@ class Initial < ActiveRecord::Migration[4.2]
     t.datetime "updated_at"
     t.datetime "deleted_at"
     t.boolean "attended"
+    t.json "data", default: "{}"
     t.index ["event_id"], name: "index_event_rsvps_on_event_id"
     t.index ["member_id"], name: "index_event_rsvps_on_member_id"
   end
@@ -41,6 +42,7 @@ class Initial < ActiveRecord::Migration[4.2]
     t.text "technical_type"
     t.string "system"
     t.string "subsystem"
+    t.json "data", default: "{}"
     t.index ["area_id"], name: "index_events_on_area_id"
     t.index ["campaign_id"], name: "index_events_on_campaign_id"
     t.index ["external_id", "system", "subsystem"], name: "index_events_on_system", unique: true
@@ -112,6 +114,30 @@ class Initial < ActiveRecord::Migration[4.2]
     t.datetime "updated_at"
   end
 
+  create_table "campaigns", force: :cascade do |t|
+    t.text "name"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer "issue_id"
+    t.text "description"
+    t.integer "author_id"
+    t.integer "controlshift_campaign_id"
+    t.text "campaign_type"
+    t.float "latitude"
+    t.float "longitude"
+    t.text "location"
+    t.text "image"
+    t.text "url"
+    t.text "slug"
+    t.text "moderation_status"
+    t.datetime "finished_at"
+    t.string "target_type"
+    t.string "outcome"
+    t.string "languages", default: [], array: true
+    t.index ["author_id"], name: "index_campaigns_on_author_id"
+    t.index ["issue_id"], name: "index_campaigns_on_issue_id"
+  end
+
   create_table "list_members", id: :serial, force: :cascade do |t|
     t.integer "list_id", null: false
     t.integer "member_id", null: false
@@ -133,7 +159,6 @@ class Initial < ActiveRecord::Migration[4.2]
     t.index ["synced_to_redshift"], name: "index_lists_on_synced_to_redshift"
   end
 
-  #??
   create_table "member_external_ids", id: :serial, force: :cascade do |t|
     t.integer "member_id", null: false
     t.string "system", null: false
@@ -151,13 +176,15 @@ class Initial < ActiveRecord::Migration[4.2]
     t.datetime "created_at"
     t.datetime "updated_at"
     t.text "unsubscribe_reason"
-    t.text "subscribe_reason"
     t.boolean "permanent"
     t.integer "unsubscribe_mailing_id"
+    t.string "subscribe_reason"
+    t.datetime "subscribed_at"
     t.index ["member_id", "subscription_id"], name: "index_member_subscriptions_on_member_id_and_subscription_id", unique: true
     t.index ["member_id"], name: "index_member_subscriptions_on_member_id"
     t.index ["subscription_id"], name: "index_member_subscriptions_on_subscription_id"
     t.index ["unsubscribe_mailing_id"], name: "index_member_subscriptions_on_unsubscribe_mailing_id"
+    t.index ["unsubscribed_at"], name: "index_member_subscriptions_on_unsubscribed_at"
   end
 
   create_table "members", force: :cascade do |t|
@@ -272,6 +299,8 @@ class Initial < ActiveRecord::Migration[4.2]
     t.datetime "created_at"
     t.datetime "updated_at"
     t.integer "member_count", default: 0
+    t.string "slug", null: false
+    t.index ["slug"], name: "index_subscriptions_on_slug", unique: true
   end
 
   create_table "custom_field_keys", id: :serial, force: :cascade do |t|

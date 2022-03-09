@@ -19,7 +19,7 @@
       <%= check_box_tag "nation_builder[mark_as_attended]", true, false %>
       <% if recruiters = IdentityNationBuilder::ApplicationHelper.recruiters %>
         <br/>
-        <%= label_tag "nation_builder[recruiter_id]", 'Recruitment method: ' %>
+        <%= label_tag "nation_builder[recruiter_id]", 'Recruiter: ' %>
         <%= select_tag "nation_builder[recruiter_id]", options_for_select(recruiters), { style: 'width:100%;' } %>
       <% end %>
     </div>
@@ -42,6 +42,7 @@
       $(".push_to_list_type").html("and RSVP")
       $(".event_rsvp_container").show()
       $(".event_rsvp_container select").prop("disabled", false)
+      $(".event_rsvp_container input").prop("disabled", false)
       $(".mark_as_attended_to_all_events_on_date_container").hide()
       $(".tag_container").hide()
       $(".tag_container input").prop("disabled", true)
@@ -52,10 +53,12 @@
       $(".tag_container input").prop("disabled", true)
       $(".event_rsvp_container").hide()
       $(".event_rsvp_container select").prop("disabled", true)
+      $(".event_rsvp_container input").prop("disabled", true)
     } else if ($("#nation_builder_sync_type").val() === "tag"){
       $(".push_to_list_type").html("and tag")
       $(".event_rsvp_container").hide()
       $(".event_rsvp_container select").prop("disabled", true)
+      $(".event_rsvp_container input").prop("disabled", true)
       $(".tag_container").show()
       $(".tag_container input").prop("disabled", false)
       $(".mark_as_attended_to_all_events_on_date_container").hide()

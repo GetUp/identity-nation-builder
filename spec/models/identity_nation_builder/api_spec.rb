@@ -174,10 +174,13 @@ describe IdentityNationBuilder::API do
     end
 
     describe '.rsvp' do
-      let!(:member) { { id: 1, mobile: '04000000000'} }
-      let!(:event_id) { 1 }
+      let!(:identity_id) { 10 }
+      let!(:nationbuilder_id) { 20 }
+      let!(:event_id) { 30 }
+      let!(:recruiter_id) { 40 }
+      let!(:member) { { id: identity_id, mobile: '04000000000'} }
+      let!(:person) { { id: nationbuilder_id, mobile: '04000000000'} }
       let!(:mark_as_attended) { true }
-      let!(:recruiter_id) { 3 }
 
       context 'with no existing rsvp' do
         it 'should call the rsvp/create endpoint with attended set' do
@@ -186,17 +189,20 @@ describe IdentityNationBuilder::API do
               {
                 status: 200,
                 headers: { 'Content-Type' => 'application/json' },
-                body: { person: member }.to_json
+                body: { person: person }.to_json
               }
             }
-          rsvp_request = stub_request(:post, %r{/sites/test/pages/events/1/rsvps})
-            .with(body: hash_including(rsvp: { person_id: 1, attended: true, recruiter_id: recruiter_id}))
+          rsvp_request = stub_request(:post, %r{/sites/test/pages/events/30/rsvps})
+            .with(body: hash_including(rsvp: { person_id: nationbuilder_id, attended: true, recruiter_id: recruiter_id}))
             .to_return({
               status: 200,
               headers: { 'Content-Type' => 'application/json' },
-              body: { rsvp: { person_id: 1, attended: true }}.to_json
+              body: { rsvp: { person_id: nationbuilder_id, attended: true }}.to_json
             })
-          IdentityNationBuilder::API.rsvp('test', [member], event_id, mark_as_attended, recruiter_id)
+          IdentityNationBuilder::API.rsvp('test', [member], event_id, mark_as_attended, recruiter_id) { |length, members|
+            expect(length).to eq(1)
+            expect(members).to eq([{ identity_id: identity_id, nationbuilder_id: nationbuilder_id }])
+          }
           expect(people_match_endpoint).to have_been_requested
           expect(rsvp_request).to have_been_requested
         end
@@ -209,11 +215,11 @@ describe IdentityNationBuilder::API do
               {
                 status: 200,
                 headers: { 'Content-Type' => 'application/json' },
-                body: { person: member }.to_json
+                body: { person: person }.to_json
               }
             }
-          rsvp_create_request = stub_request(:post, %r{/sites/test/pages/events/1/rsvps})
-            .with(body: hash_including(rsvp: { person_id: 1, attended: true}))
+          rsvp_create_request = stub_request(:post, %r{/sites/test/pages/events/30/rsvps})
+            .with(body: hash_including(rsvp: { person_id: nationbuilder_id, attended: true}))
             .to_return({
               status: 400,
               headers: { 'Content-Type' => 'application/json' },
@@ -223,23 +229,26 @@ describe IdentityNationBuilder::API do
                 "validation_errors": [ "signup_id has already been taken" ]
               }.to_json
             })
-          rsvp_list_request = stub_request(:get, %r{pages/events/1/rsvps})
+          rsvp_list_request = stub_request(:get, %r{pages/events/30/rsvps})
             .to_return({
               status: 200,
               headers: { 'Content-Type' => 'application/json' },
               body: {
-                results: [{ id: 12222, event_id: event_id, person_id: 1, attended: false }]
+                results: [{ id: 12222, event_id: event_id, person_id: nationbuilder_id, attended: false }]
               }.to_json
             })
-          rsvp_update_request = stub_request(:put, %r{pages/events/1/rsvps})
+          rsvp_update_request = stub_request(:put, %r{pages/events/30/rsvps})
             .to_return({
               status: 200,
               headers: { 'Content-Type' => 'application/json' },
               body: {
-                rsvp: { id: 12222, event_id: event_id, person_id: 1, attended: false }
+                rsvp: { id: 12222, event_id: event_id, person_id: nationbuilder_id, attended: false }
               }.to_json
             })
-          IdentityNationBuilder::API.rsvp('test', [member], event_id, mark_as_attended)
+          IdentityNationBuilder::API.rsvp('test', [member], event_id, mark_as_attended) { |length, members|
+            expect(length).to eq(1)
+            expect(members).to eq([{ identity_id: identity_id, nationbuilder_id: nationbuilder_id }])
+          }
           expect(people_match_endpoint).to have_been_requested
           expect(rsvp_create_request).to have_been_requested
           expect(rsvp_list_request).to have_been_requested
@@ -252,12 +261,13 @@ describe IdentityNationBuilder::API do
       let!(:nb_event_data) { { "id": 1, "event_id": 2, "person_id": 3 } }
       let!(:member) { FactoryBot.create(:member) }
       let!(:member_data) { { id: member.id } }
-      let!(:event) { Event.create!(external_id: 2, start_time: Time.now, data: { 'site_slug': 'test_slug' }) }
+      let!(:campaign) { Campaign.create!(name: "Test campaign") }
+      let!(:event) { Event.create!(name: "Event 1", campaign: campaign, external_id: 2, start_time: Time.now, data: { 'site_slug': 'test_slug' }) }
       let!(:event_rsvp) { EventRsvp.create!(event: event, member: member, attended: false, data: nb_event_data) }
-      let!(:old_event) { Event.create!(external_id: 2, start_time: 5.days.ago) }
+      let!(:old_event) { Event.create!(name: "Event 2", campaign: campaign, external_id: 2, start_time: 5.days.ago) }
       let!(:old_nb_event_data) { { "id": 8, "event_id": 9, "person_id": 3 } }
       let!(:old_rsvp) { EventRsvp.create!(event: old_event, member: member, attended: false, data: nb_event_data) }
-      let!(:future_event) { Event.create!(external_id: 2, start_time: 1.days.since) }
+      let!(:future_event) { Event.create!(name: "Event 3", campaign: campaign, external_id: 2, start_time: 1.days.since) }
       let!(:future_nb_event_data) { { "id": 12, "event_id": 19, "person_id": 3 } }
       let!(:future_rsvp) { EventRsvp.create!(event: future_event, member: member, attended: false, data: nb_event_data) }
 
@@ -271,8 +281,10 @@ describe IdentityNationBuilder::API do
               rsvp: { id: 1, event_id: 2, person_id: 3, attended: false }
             }.to_json
           })
-        result = IdentityNationBuilder::API.mark_as_attended_to_all_events_on_date('test', [member_data])
-        expect(result).to eq(1)
+        IdentityNationBuilder::API.mark_as_attended_to_all_events_on_date('test', [member_data]) { |length, members|
+          expect(length).to eq(1)
+          expect(members).to eq([{ identity_id: member.id, nationbuilder_id: 3 }])
+        }
         expect(rsvp_update_request).to have_been_requested
       end
 
@@ -286,8 +298,10 @@ describe IdentityNationBuilder::API do
               "code":"not_found", "message":"Record not found"
             }.to_json
           })
-        result = IdentityNationBuilder::API.mark_as_attended_to_all_events_on_date(nil, [member_data])
-        expect(result).to eq(0)
+        IdentityNationBuilder::API.mark_as_attended_to_all_events_on_date(nil, [member_data]) { |length, members|
+          expect(length).to eq(0)
+          expect(members).to eq([])
+        }
         expect(rsvp_update_request).to have_been_requested
       end
     end

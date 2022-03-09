@@ -3,6 +3,7 @@ require 'rails_helper'
 describe IdentityNationBuilder do
   context '#pull' do
     before(:each) do
+      allow(Settings).to receive_message_chain(:app, :inbound_url).and_return("https://example.com/")
       clean_external_database
       @sync_id = 1
       @external_system_params = JSON.generate({'pull_job' => 'fetch_new_events'})
@@ -23,6 +24,7 @@ describe IdentityNationBuilder do
     let!(:person_mobileonly_response){ JSON.parse(File.read("spec/fixtures/person_mobileonly_response.json")) }
 
     before(:each) do
+      allow(Settings).to receive_message_chain(:app, :inbound_url).and_return("https://example.com/")
       clean_external_database
 
       Settings.stub_chain(:options, :default_phone_country_code) { '61' }
@@ -32,7 +34,12 @@ describe IdentityNationBuilder do
     end
 
     context 'with SideKiq inline' do
+      let!(:campaign) { FactoryBot.create(:campaign) }
+
       before(:each) do
+        allow(Settings).to receive_message_chain(:nation_builder, :default_event_campaign_id).and_return(campaign.id)
+        allow(Settings).to receive_message_chain(:options, :allow_subscribe_via_upsert_member).and_return(true)
+        allow(Settings).to receive_message_chain(:options, :default_member_opt_in_subscriptions).and_return(true)
         IdentityNationBuilder::API.stub_chain(:all_event_rsvps) { event_rsvp_response["results"] }
         IdentityNationBuilder::API.stub_chain(:person) { person_response["person"] }
       end
@@ -80,14 +87,16 @@ describe IdentityNationBuilder do
           IdentityNationBuilder.fetch_new_events(@sync_id) {}
           Event.update_all(updated_at: 3.days.ago)
           IdentityNationBuilder.fetch_new_events(@sync_id) {}
-          expect(Event.first.updated_at.to_date).to eq(Date.today)
+          expect(Event.first.updated_at.to_date).to eq(Time.now.utc.to_date)
         end
       end
 
       context 'with an existing event that is in the time period but not returned by the api' do
         let!(:removed_event){ Event.create!(
           system: IdentityNationBuilder::SYSTEM_NAME,
+          name: "Existing event",
           subsystem: 'action',
+          campaign_id: campaign.id,
           start_time: Time.now,
           updated_at: 4.days.ago,
           id: 9999,
@@ -127,7 +136,10 @@ describe IdentityNationBuilder do
     end
 
     context 'with an event without an address' do
+      let!(:campaign) { FactoryBot.create(:campaign) }
+
       it 'should use the event name as the location' do
+        allow(Settings).to receive_message_chain(:nation_builder, :default_event_campaign_id).and_return(campaign.id)
         allow(IdentityNationBuilder).to receive(:fetch_new_event_rsvps).and_return(event_rsvp_response)
         Sidekiq::Testing.fake!
         events_without_venue_address = events_response['results']
@@ -148,6 +160,7 @@ describe IdentityNationBuilder do
       end
 
       before(:each) do
+        allow(Settings).to receive_message_chain(:app, :inbound_url).and_return("https://example.com/")
         clean_external_database
 
         IdentityNationBuilder::API.stub_chain(:all_event_rsvps) { event_rsvp_response["results"] }
@@ -158,6 +171,11 @@ describe IdentityNationBuilder do
       end
 
       it 'should record details of member who only has a mobile number' do
+        campaign =  FactoryBot.create(:campaign)
+        allow(Settings).to receive_message_chain(:nation_builder, :default_event_campaign_id).and_return(campaign.id)
+        allow(Settings).to receive_message_chain(:options, :allow_subscribe_via_upsert_member).and_return(true)
+        allow(Settings).to receive_message_chain(:options, :default_member_opt_in_subscriptions).and_return(true)
+
         mobile_last_three_digits = person_mobileonly_response['person']['mobile'].from(-3)
         IdentityNationBuilder.fetch_new_events(@sync_id) {}
         expect(Member.last).to have_attributes(

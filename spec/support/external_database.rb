@@ -15,6 +15,7 @@ module ExternalDatabaseHelpers
     def clean
       MemberExternalId.all.destroy_all
       Event.all.destroy_all
+      Campaign.all.destroy_all
       PhoneNumber.all.destroy_all
       ListMember.all.destroy_all
       List.all.destroy_all

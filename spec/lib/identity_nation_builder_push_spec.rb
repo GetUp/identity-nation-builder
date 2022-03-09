@@ -5,8 +5,9 @@ describe IdentityNationBuilder do
     context 'with valid parameters' do
       context 'with rsvp' do
         it 'returns correct sync item type' do
-          external_system_params = {'sync_type' => 'rsvp', 'event_id' => 1, 'mark_as_attended' => true}
-          expect(IdentityNationBuilder.sync_type_item(external_system_params)).to eq([1, true])
+          external_system_params = {'sync_type' => 'rsvp', 'event_id' => 1, 'mark_as_attended' => true, 'recruiter_id' => 2}
+
+          expect(IdentityNationBuilder.sync_type_item(external_system_params)).to eq([1, true, 2])
         end
       end
       context 'with tag' do
@@ -72,9 +73,13 @@ describe IdentityNationBuilder do
       context 'with valid parameters' do
         it 'yeilds write_result_count' do
           external_system_params = JSON.generate({'sync_type' => 'rsvp', 'event_id' => 1, 'mark_as_attended' => true})
-          expect(IdentityNationBuilder::API).to receive(:rsvp).exactly(1).times.with(anything, anything, 1, true, nil) { 2 }
+          expect(IdentityNationBuilder::API).to receive(:rsvp).exactly(1).times.with(anything, anything, 1, true, nil).and_yield(
+            @members.length, [
+              {identity_id: @members[0].id, nationbuilder_id: @members[0].id },
+              {identity_id: @members[1].id, nationbuilder_id: @members[1].id },
+            ])
           IdentityNationBuilder.push_in_batches(1, @members, external_system_params) do |batch_index, write_result_count|
-            expect(write_result_count).to eq(2)
+            expect(write_result_count).to eq(@members.length)
           end
         end
       end
@@ -83,9 +88,13 @@ describe IdentityNationBuilder do
       context 'with valid parameters' do
         it 'yeilds write_result_count' do
           external_system_params = JSON.generate({'sync_type' => 'tag', 'tag' => 'test_tag'})
-          expect(IdentityNationBuilder::API).to receive(:tag).exactly(1).times.with(anything, anything, anything) { 2 }
+          expect(IdentityNationBuilder::API).to receive(:tag).exactly(1).times.with(anything, anything, anything).and_yield(
+            @members.length, [
+              {identity_id: @members[0].id, nationbuilder_id: @members[0].id },
+              {identity_id: @members[1].id, nationbuilder_id: @members[1].id },
+            ])
           IdentityNationBuilder.push_in_batches(1, @members, external_system_params) do |batch_index, write_result_count|
-            expect(write_result_count).to eq(2)
+            expect(write_result_count).to eq(@members.length)
           end
         end
       end
@@ -95,9 +104,14 @@ describe IdentityNationBuilder do
       context 'with valid parameters' do
         it 'yeilds write_result_count' do
           external_system_params = JSON.generate({'sync_type' => 'mark_as_attended_to_all_events_on_date'})
-          expect(IdentityNationBuilder::API).to receive(:mark_as_attended_to_all_events_on_date).exactly(1).times.with(nil, instance_of(@members.class)) { 2 }
+          expect(IdentityNationBuilder::API).to receive(:mark_as_attended_to_all_events_on_date).exactly(1).times.with(nil, instance_of(@members.class))
+.and_yield(
+            3, [
+              {identity_id: @members[0].id, nationbuilder_id: @members[0].id },
+              {identity_id: @members[1].id, nationbuilder_id: @members[1].id },
+            ])          
           IdentityNationBuilder.push_in_batches(1, @members, external_system_params) do |batch_index, write_result_count|
-            expect(write_result_count).to eq(2)
+            expect(write_result_count).to eq(3)
           end
         end
       end

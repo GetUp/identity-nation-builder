@@ -4,16 +4,19 @@ module IdentityNationBuilder
   class API
     def self.rsvp(site_slug, members, event_id, mark_as_attended=false, recruiter_id=nil)
       member_ids = members.map do |member|
+        identity_id = member[:id]
         member = member.except(:id, :nationbuilder_id)
         person = find_or_create_person(member)
         response = rsvp_person(site_slug, event_id, person, mark_as_attended, recruiter_id)
-        if person && !response.try(:[], 'rsvp') && mark_as_attended
+        if !response.try(:[], 'rsvp') && mark_as_attended
           pager = NationBuilder::Paginator.new(get_api_client, event_rsvps(site_slug, event_id))
           rsvp = pager.body['results'].select { |result| result['person_id'] == person['id'] }.first
           if rsvp && !rsvp['attended']
             update_rsvp(site_slug, rsvp, mark_as_attended)
           end
         end
+
+        { identity_id: identity_id, nationbuilder_id: person['id'] }
       end
       yield member_ids.length, member_ids
     end
@@ -32,21 +35,25 @@ module IdentityNationBuilder
     end
 
     def self.mark_as_attended_to_all_events_on_date(site_slug, members)
-      marked_records = 0
-      member_ids = members.map { |member| member[:id] }
-      rsvps_on_date = EventRsvp.where(member_id: member_ids)
+      rsvps_on_date = EventRsvp.where(member_id: members.map { |member| member[:id] })
                                 .joins(:event)
                                 .where('events.start_time::date = ?', Date.current)
                                 .where(attended: false)
+      member_ids = []
       rsvps_on_date.each do |rsvp|
         begin
           update_rsvp(rsvp.event.data['site_slug'], rsvp.data, true)
-          marked_records += 1
+          member_ids.append(
+            {
+              identity_id: rsvp.member.id,
+              nationbuilder_id: rsvp.data['person_id']
+            }
+          )
         rescue NationBuilder::ClientError => response
           raise unless response.message =~ /Record not found/i
         end
       end
-      yield marked_records, member_ids
+      yield member_ids.length, member_ids
     end
 
     def self.sites
@@ -162,13 +169,14 @@ module IdentityNationBuilder
     end
 
     def self.tag_list(list_id, tag)
-      api(:lists, :add_tag, { list_id: list_id, tag: URI.escape(tag) })
+      api(:lists, :add_tag, { list_id: list_id, tag: URI.encode_www_form_component(tag) })
     end
 
     def self.recruiters
       recruiters = api(:people_tags, :people, { tag: 'recruiter' })['results'].map{|org|
         [ org['last_name'], org['id'] ]
       }.sort
+      Sidekiq.redis { |r| r.set 'nationbuilder:recruiters', recruiters.to_json}
       recruiters
     end
 
@@ -216,49 +224,56 @@ module IdentityNationBuilder
       api(:people, :add, { person: member })['person']
     end
 
-    def self.api(*args)
-      args[2] = {} unless args.third
-      args.third[:fire_webhooks] = false
+    def self.api(endpoint, method, params)
       started_at = DateTime.now
       begin
-        payload = get_api_client.call(*args)
-        raise_if_empty_payload payload
-      rescue NationBuilder::RateLimitedError
-        raise
-      rescue NationBuilder::ClientError => e
-        payload = JSON.parse(e.message)
-        unless payload_has_a_no_match_code?(payload) || attempt_to_rsvp_person_twice(args[1], e.message)
-          log_api_call(started_at, payload, *args)
-          raise
+        response = get_api_client.call(endpoint, method, params)
+
+        if not response
+          raise NationBuilder::RateLimitedError,
+                'Empty response returned from NB API - likely due to Rate Limiting'
         end
+      rescue NationBuilder::RateLimitedError => e
+        Rails.logger.error('nation_builder.api') { e }
+        raise e
+      rescue NationBuilder::ClientError => e
+        response = JSON.parse(e.message)
+        unless response_has_a_no_match_code?(response) ||
+               attempt_to_rsvp_person_twice(method, e.message)
+          Rails.logger.error('nation_builder.api') { e }
+          raise e
+        end
+      ensure
+        log_api_call(started_at, endpoint, method, params, response)
       end
-      log_api_call(started_at, payload, *args)
-      payload
+
+      response
     end
 
     def self.get_api_client
       NationBuilder::Client.new Settings.nation_builder.site, Settings.nation_builder.token, retries: 8
     end
 
-    def self.payload_has_a_no_match_code?(payload)
-      payload && payload['code'] == 'no_matches'
+    def self.response_has_a_no_match_code?(response)
+      response && response['code'] == 'no_matches'
     end
 
     def self.attempt_to_rsvp_person_twice(api_call, error)
       api_call == :rsvp_create && error.include?("signup_id has already been taken")
     end
 
-    def self.raise_if_empty_payload(payload)
-      raise RuntimeError, 'Empty payload returned from NB API - likely due to Rate Limiting' if payload.nil?
-    end
-
-    def self.log_api_call(started_at, payload, *call_args)
-      return unless Settings.nation_builder.debug
-      data = {
-        started_at: started_at, payload: payload, completed_at: DateTime.now,
-        endpoint: call_args[0..1].join('/'), data: call_args.third,
-      }
-      puts "NationBuilder API: #{data.inspect}"
+    def self.log_api_call(started_at, endpoint, method, params, response)
+      if Settings.nation_builder.debug
+        data = {
+          started_at: started_at,
+          endpoint: endpoint,
+          method: method,
+          params: params,
+          response: response,
+          completed_at: DateTime.now,
+        }
+        puts "NationBuilder API: #{data.inspect}"
+      end
     end
 
     def self.list_from_cache(cache_key)

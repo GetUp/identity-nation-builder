@@ -34,7 +34,7 @@ module IdentityNationBuilder
           if sync_type === 'tag'
             member_ids.each do |member_id|
               member = Member.find(member_id[:identity_id])
-              member.update_external_id(SYSTEM_NAME, member_id[:nationbuilder_id], {sync_id: sync_id}) if member
+              member.update_external_id(SYSTEM_NAME, member_id[:nationbuilder_id])
             end
           end
 
@@ -126,6 +126,10 @@ module IdentityNationBuilder
         external_id: nb_event["id"]
       )
 
+      if event.campaign == nil
+        event.campaign = Campaign.find(Settings.nation_builder.default_event_campaign_id)
+      end
+
       event.update!(
         name: nb_event['name'],
         start_time: nb_event['start_time'] && DateTime.parse(nb_event['start_time']),
@@ -209,7 +213,6 @@ module IdentityNationBuilder
     end
 
     recruiters = IdentityNationBuilder::API.recruiters
-    Sidekiq.redis { |r| r.set 'nationbuilder:recruiters', recruiters.to_json}
     yield(
       recruiters.size,
       recruiters,
