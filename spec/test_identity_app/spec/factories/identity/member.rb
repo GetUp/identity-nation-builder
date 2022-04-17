@@ -13,6 +13,10 @@ FactoryBot.define do
           create(:custom_field, member: member, custom_field_key: FactoryBot.create(:custom_field_key))
         end
       end
+
+      factory :member_with_mobile_without_email do
+        email { nil }
+      end
     end
 
     factory :member_without_email do
@@ -22,6 +26,10 @@ FactoryBot.define do
     factory :member_with_landline do
       after(:create) do |member, evaluator|
         create(:landline_number, member: member)
+      end
+
+      factory :member_with_landline_without_email do
+        email { nil }
       end
     end
 
