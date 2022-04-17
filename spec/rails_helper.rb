@@ -60,6 +60,8 @@ RSpec.configure do |config|
   end
 
   config.around(:each) do |example|
+    # Default subscriptions need to exist outside of test transations
+    Subscription.defaults.all()
     DatabaseCleaner.cleaning do
       # Allow individual specs to do this when they need to via a method in
       # auth_helpers, which could also run `FactoryBot.create(:member_admin)`
