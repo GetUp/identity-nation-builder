@@ -169,6 +169,34 @@ class Initial < ActiveRecord::Migration[4.2]
     t.index ["system", "external_id"], name: "index_member_external_ids_on_system_and_external_id", unique: true
   end
 
+  create_table "member_subscription_events", force: :cascade do |t|
+    t.string "action", null: false
+    t.string "operation", null: false
+    t.string "operation_reason", default: "not_specified"
+    t.boolean "operation_permanently_deferred", default: false
+    t.bigint "member_subscription_id"
+    t.integer "subscribable_id"
+    t.string "subscribable_type"
+    t.boolean "subscription_status_changed"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["member_subscription_id", "operation"], name: "index_member_subscription_events_member_subscription_operation"
+    t.index ["member_subscription_id"], name: "index_member_subscription_events_on_member_subscription_id"
+    t.index ["subscribable_type", "subscribable_id", "operation"], name: "index_member_subscription_events_subscribable_operation"
+    t.index ["subscribable_type", "subscribable_id"], name: "index_member_subscription_events_subscribable"
+  end
+
+  create_table "member_subscription_logs", id: :serial, force: :cascade do |t|
+    t.integer "member_id"
+    t.integer "subscription_id"
+    t.text "operation"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.string "dyno"
+    t.text "unsubscribe_reason"
+    t.text "backtrace"
+  end
+
   create_table "member_subscriptions", id: :serial, force: :cascade do |t|
     t.integer "subscription_id", null: false
     t.integer "member_id", null: false
@@ -188,10 +216,7 @@ class Initial < ActiveRecord::Migration[4.2]
   end
 
   create_table "members", force: :cascade do |t|
-    t.integer "cons_id"
     t.text "email"
-    t.json "contact"
-    t.json "meta"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "joined_at"
@@ -200,7 +225,6 @@ class Initial < ActiveRecord::Migration[4.2]
     t.json "action_history"
     t.text "reset_token"
     t.integer "authy_id"
-    t.integer "point_person_id"
     t.integer "role_id"
     t.datetime "last_donated"
     t.integer "donations_count"
@@ -218,10 +242,10 @@ class Initial < ActiveRecord::Migration[4.2]
     t.string "title"
     t.string "gender"
     t.string "donation_preference", limit: 20
+    t.index "btrim(((COALESCE(first_name, ''::text) || ' '::text) || COALESCE(last_name, ''::text))) gin_trgm_ops", name: "index_members_on_full_name_gin", using: :gin
     t.index ["email"], name: "index_members_on_email"
-    t.index ["first_name"], name: "index_members_on_first_name"
-    t.index ["last_name"], name: "index_members_on_last_name"
-    t.index ["point_person_id"], name: "index_members_on_point_person_id"
+    t.index ["email"], name: "index_members_on_email_gin", opclass: :gin_trgm_ops, using: :gin
+    t.index ["guid"], name: "index_members_on_guid", unique: true
     t.index ["role_id"], name: "index_members_on_role_id"
   end
 

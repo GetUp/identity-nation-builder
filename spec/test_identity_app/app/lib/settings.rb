@@ -23,13 +23,19 @@ class Settings
   end
 
   def self.app
-    return { }
+    return {
+      "inbound_url" => 'https://example.com/inbound'
+    }
   end
 
   def self.options
     return {
       "ignore_name_change_for_donation" => true
     }
+  end
+
+  def self.databases
+    return { }
   end
 
   def self.sidekiq_redis_url

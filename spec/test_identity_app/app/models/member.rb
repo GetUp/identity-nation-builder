@@ -300,8 +300,11 @@ class Member < ApplicationRecord
       country: new_address[:country],
     }
 
-    # If this user already has the canonical address among their addresses, touch it to make it their most recent. Otherwise insert it.
-    if (canonical_address = CanonicalAddress.search(address_attributes))
+    # If the new address has line1/line2, and if the member already has the
+    # canonical address among their addresses, touch it to make it
+    # their most recent. Otherwise insert it.
+    if address_attributes.slice(:line1, :line2).values.any?(&:present?) &&
+       (canonical_address = CanonicalAddress.search(address_attributes))
       if (new_address = addresses.find_by(canonical_address: canonical_address))
         new_address.touch!
       else

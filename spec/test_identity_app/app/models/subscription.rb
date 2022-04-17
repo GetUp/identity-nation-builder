@@ -64,7 +64,8 @@ class Subscription < ApplicationRecord
       id: [
         EMAIL_SUBSCRIPTION, SMS_SUBSCRIPTION, NOTIFICATION_SUBSCRIPTION, FACEBOOK_SUBSCRIPTION,
         CALLING_SUBSCRIPTION, POST_SUBSCRIPTION, PROFILING_SUBSCRIPTION
-      ]
+      ],
+      deleted_at: nil
     )
   }
 
