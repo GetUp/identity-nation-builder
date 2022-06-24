@@ -1,5 +1,10 @@
 module IdentityNationBuilder
-  class NationBuilderMemberSyncPushSerializer < ActiveModel::Serializer
+
+  #
+  # Handles serialisation, sdeserialisation, and merging of a NB
+  # Person with an Id Member
+  #
+  class PersonSerializer < ActiveModel::Serializer
 
     attributes :prefix, :first_name, :middle_name, :last_name, :sex,
                :email, :email_opt_in,
@@ -232,6 +237,7 @@ module IdentityNationBuilder
 
       equal = true
       attributes.each { |attr,value|
+        puts " compare: #{attr}: #{id_data[attr]}/#{person_data[attr.to_s]}"
         equal = id_data[attr] == person_data[attr.to_s]
         break unless equal
       }

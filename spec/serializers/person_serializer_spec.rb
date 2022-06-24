@@ -1,7 +1,7 @@
 
 $nb_id = 0
 
-describe IdentityNationBuilder::NationBuilderMemberSyncPushSerializer do
+describe IdentityNationBuilder::PersonSerializer do
   let!(:country_code) { '61' }
 
   before(:each) do
@@ -27,7 +27,7 @@ describe IdentityNationBuilder::NationBuilderMemberSyncPushSerializer do
     it 'returns valid object' do
       rows = ActiveModel::Serializer::CollectionSerializer.new(
         @batch_members,
-        serializer: IdentityNationBuilder::NationBuilderMemberSyncPushSerializer
+        serializer: IdentityNationBuilder::PersonSerializer
       ).as_json
       expect(rows.count).to eq(2)
       expect(rows[0][:email]).to eq(ListMember.first.member.email)
@@ -45,7 +45,7 @@ describe IdentityNationBuilder::NationBuilderMemberSyncPushSerializer do
       it 'returns valid object' do
         rows = ActiveModel::Serializer::CollectionSerializer.new(
           @batch_members,
-          serializer: IdentityNationBuilder::NationBuilderMemberSyncPushSerializer
+          serializer: IdentityNationBuilder::PersonSerializer
         ).as_json
         expect(rows[0][:phone]).to eq(@member.phone_numbers.landline.first.phone)
         expect(rows[0][:mobile]).to eq(@member.phone_numbers.mobile.first.phone)
@@ -55,7 +55,7 @@ describe IdentityNationBuilder::NationBuilderMemberSyncPushSerializer do
     context 'serialiser data equality' do
       let!(:equality_member) { FactoryBot.create(:member_with_mobile) }
       let!(:serialiser) {
-        IdentityNationBuilder::NationBuilderMemberSyncPushSerializer.new(equality_member)
+        IdentityNationBuilder::PersonSerializer.new(equality_member)
       }
       let!(:person_data) {
         # convert keys to strings since NB lib returns data with string keys
@@ -88,7 +88,7 @@ describe IdentityNationBuilder::NationBuilderMemberSyncPushSerializer do
   context 'temporal comparisons' do
     let!(:temporal_member) { FactoryBot.create(:member_with_mobile) }
     let!(:serialiser) {
-      IdentityNationBuilder::NationBuilderMemberSyncPushSerializer.new(temporal_member)
+      IdentityNationBuilder::PersonSerializer.new(temporal_member)
     }
     let!(:newer_data) {
       data = serialiser.serializable_hash
@@ -135,7 +135,7 @@ describe IdentityNationBuilder::NationBuilderMemberSyncPushSerializer do
       member
     }
     let!(:serialiser) {
-      IdentityNationBuilder::NationBuilderMemberSyncPushSerializer.new(member)
+      IdentityNationBuilder::PersonSerializer.new(member)
     }
     let!(:person_data) {
       # convert keys to strings since NB lib returns data with string keys
