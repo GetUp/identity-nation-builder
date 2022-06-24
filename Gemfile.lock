@@ -90,12 +90,13 @@ GEM
     crack (0.4.5)
       rexml
     crass (1.0.6)
-    database_cleaner (2.0.1)
-      database_cleaner-active_record (~> 2.0.0)
     database_cleaner-active_record (2.0.1)
       activerecord (>= 5.a)
       database_cleaner-core (~> 2.0.0)
     database_cleaner-core (2.0.1)
+    database_cleaner-redis (2.0.0)
+      database_cleaner-core (~> 2.0.0)
+      redis
     diff-lcs (1.5.0)
     dotenv (2.7.6)
     dotenv-rails (2.7.6)
@@ -246,6 +247,7 @@ GEM
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
     zeitwerk (2.5.4)
+    zip (2.0.2)
 
 PLATFORMS
   ruby
@@ -253,12 +255,13 @@ PLATFORMS
 DEPENDENCIES
   active_model_serializers
   byebug
-  database_cleaner
+  database_cleaner-active_record
+  database_cleaner-redis
   dotenv-rails
   factory_bot_rails
   faker
   identity_nation_builder!
-  nationbuilder-rb (~> 1.6.1)
+  nationbuilder-rb (~> 1.6.2)
   pg
   phony
   pry
@@ -275,6 +278,7 @@ DEPENDENCIES
   spring-commands-rspec
   timecop
   webmock
+  zip
 
 BUNDLED WITH
    2.2.32

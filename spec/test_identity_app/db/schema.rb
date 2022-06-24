@@ -2,22 +2,22 @@
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
 #
-# Note that this schema.rb definition is the authoritative source for your
-# database schema. If you need to create the application database on another
-# system, you should be using db:schema:load, not running all the migrations
-# from scratch. The latter is a flawed and unsustainable approach (the more migrations
-# you'll amass, the slower it'll run and the greater likelihood for issues).
+# This file is the source Rails uses to define your schema when running `bin/rails
+# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
 #
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema.define(version: 0) do
 
   # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
-  enable_extension "pg_trgm"
   enable_extension "btree_gin"
   enable_extension "btree_gist"
   enable_extension "intarray"
+  enable_extension "pg_trgm"
+  enable_extension "plpgsql"
 
   create_table "addresses", force: :cascade do |t|
     t.integer "member_id", null: false
@@ -67,6 +67,30 @@ ActiveRecord::Schema.define(version: 0) do
     t.text "representative_gender"
   end
 
+  create_table "campaigns", force: :cascade do |t|
+    t.text "name"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer "issue_id"
+    t.text "description"
+    t.integer "author_id"
+    t.integer "controlshift_campaign_id"
+    t.text "campaign_type"
+    t.float "latitude"
+    t.float "longitude"
+    t.text "location"
+    t.text "image"
+    t.text "url"
+    t.text "slug"
+    t.text "moderation_status"
+    t.datetime "finished_at"
+    t.string "target_type"
+    t.string "outcome"
+    t.string "languages", default: [], array: true
+    t.index ["author_id"], name: "index_campaigns_on_author_id"
+    t.index ["issue_id"], name: "index_campaigns_on_issue_id"
+  end
+
   create_table "canonical_addresses", id: :serial, force: :cascade do |t|
     t.string "official_id"
     t.text "line1"
@@ -80,9 +104,9 @@ ActiveRecord::Schema.define(version: 0) do
     t.text "search_text"
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.index "search_text gist_trgm_ops", name: "canonical_addresses_search_text", using: :gist
     t.index ["official_id"], name: "index_canonical_addresses_on_official_id"
     t.index ["postcode"], name: "index_canonical_addresses_on_postcode"
+    t.index ["search_text"], name: "canonical_addresses_search_text", opclass: :gist_trgm_ops, using: :gist
   end
 
   create_table "contact_campaigns", id: :serial, force: :cascade do |t|
@@ -125,6 +149,7 @@ ActiveRecord::Schema.define(version: 0) do
     t.datetime "happened_at"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.json "data", default: "{}"
     t.index ["contact_campaign_id"], name: "index_contacts_on_contact_campaign_id"
     t.index ["contact_type"], name: "index_contacts_on_contact_type"
     t.index ["contactee_id"], name: "index_contacts_on_contactee_id"
@@ -173,7 +198,7 @@ ActiveRecord::Schema.define(version: 0) do
     t.datetime "updated_at"
     t.datetime "deleted_at"
     t.boolean "attended"
-    t.json 'data', default: '{}'
+    t.json "data", default: "{}"
     t.index ["event_id"], name: "index_event_rsvps_on_event_id"
     t.index ["member_id"], name: "index_event_rsvps_on_member_id"
   end
@@ -202,7 +227,7 @@ ActiveRecord::Schema.define(version: 0) do
     t.text "technical_type"
     t.string "system"
     t.string "subsystem"
-    t.json 'data', default: '{}'
+    t.json "data", default: "{}"
     t.index ["area_id"], name: "index_events_on_area_id"
     t.index ["campaign_id"], name: "index_events_on_campaign_id"
     t.index ["external_id", "system", "subsystem"], name: "index_events_on_system", unique: true
@@ -242,6 +267,34 @@ ActiveRecord::Schema.define(version: 0) do
     t.index ["system", "external_id"], name: "index_member_external_ids_on_system_and_external_id", unique: true
   end
 
+  create_table "member_subscription_events", force: :cascade do |t|
+    t.string "action", null: false
+    t.string "operation", null: false
+    t.string "operation_reason", default: "not_specified"
+    t.boolean "operation_permanently_deferred", default: false
+    t.bigint "member_subscription_id"
+    t.integer "subscribable_id"
+    t.string "subscribable_type"
+    t.boolean "subscription_status_changed"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["member_subscription_id", "operation"], name: "index_member_subscription_events_member_subscription_operation"
+    t.index ["member_subscription_id"], name: "index_member_subscription_events_on_member_subscription_id"
+    t.index ["subscribable_type", "subscribable_id", "operation"], name: "index_member_subscription_events_subscribable_operation"
+    t.index ["subscribable_type", "subscribable_id"], name: "index_member_subscription_events_subscribable"
+  end
+
+  create_table "member_subscription_logs", id: :serial, force: :cascade do |t|
+    t.integer "member_id"
+    t.integer "subscription_id"
+    t.text "operation"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.string "dyno"
+    t.text "unsubscribe_reason"
+    t.text "backtrace"
+  end
+
   create_table "member_subscriptions", id: :serial, force: :cascade do |t|
     t.integer "subscription_id", null: false
     t.integer "member_id", null: false
@@ -249,20 +302,19 @@ ActiveRecord::Schema.define(version: 0) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.text "unsubscribe_reason"
-    t.text "subscribe_reason"
     t.boolean "permanent"
     t.integer "unsubscribe_mailing_id"
+    t.string "subscribe_reason"
+    t.datetime "subscribed_at"
     t.index ["member_id", "subscription_id"], name: "index_member_subscriptions_on_member_id_and_subscription_id", unique: true
     t.index ["member_id"], name: "index_member_subscriptions_on_member_id"
     t.index ["subscription_id"], name: "index_member_subscriptions_on_subscription_id"
     t.index ["unsubscribe_mailing_id"], name: "index_member_subscriptions_on_unsubscribe_mailing_id"
+    t.index ["unsubscribed_at"], name: "index_member_subscriptions_on_unsubscribed_at"
   end
 
   create_table "members", force: :cascade do |t|
-    t.integer "cons_id"
     t.text "email"
-    t.json "contact"
-    t.json "meta"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "joined_at"
@@ -271,7 +323,6 @@ ActiveRecord::Schema.define(version: 0) do
     t.json "action_history"
     t.text "reset_token"
     t.integer "authy_id"
-    t.integer "point_person_id"
     t.integer "role_id"
     t.datetime "last_donated"
     t.integer "donations_count"
@@ -289,10 +340,10 @@ ActiveRecord::Schema.define(version: 0) do
     t.string "title"
     t.string "gender"
     t.string "donation_preference", limit: 20
+    t.index "btrim(((COALESCE(first_name, ''::text) || ' '::text) || COALESCE(last_name, ''::text))) gin_trgm_ops", name: "index_members_on_full_name_gin", using: :gin
     t.index ["email"], name: "index_members_on_email"
-    t.index ["first_name"], name: "index_members_on_first_name"
-    t.index ["last_name"], name: "index_members_on_last_name"
-    t.index ["point_person_id"], name: "index_members_on_point_person_id"
+    t.index ["email"], name: "index_members_on_email_gin", opclass: :gin_trgm_ops, using: :gin
+    t.index ["guid"], name: "index_members_on_guid", unique: true
     t.index ["role_id"], name: "index_members_on_role_id"
   end
 
@@ -374,6 +425,8 @@ ActiveRecord::Schema.define(version: 0) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.integer "member_count", default: 0
+    t.string "slug", null: false
+    t.index ["slug"], name: "index_subscriptions_on_slug", unique: true
   end
 
   create_table "syncs", force: :cascade do |t|
@@ -387,7 +440,7 @@ ActiveRecord::Schema.define(version: 0) do
     t.bigint "list_id"
     t.bigint "contact_campaign_id"
     t.bigint "author_id"
-    t.json "reference_data", default: '{}'
+    t.json "reference_data", default: "{}"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["author_id"], name: "index_syncs_on_author_id"

@@ -3,7 +3,7 @@ require "identity_nation_builder/engine"
 module IdentityNationBuilder
   SYSTEM_NAME = 'nation_builder'
   SYNCING = 'members'
-  CONTACT_TYPE = {'rsvp' => 'event', 'tag' => 'list', 'mark_as_attended_to_all_events_on_date' => ' mark as attended'}
+  CONTACT_TYPE = {'rsvp' => 'event', 'tag' => 'tag'}
   PULL_JOBS = [[:fetch_new_events, 1.hours], [:fetch_recruiters, 1.hours]]
   MEMBER_RECORD_DATA_TYPE='object'
 
@@ -22,19 +22,15 @@ module IdentityNationBuilder
         external_system_params_hash = JSON.parse(external_system_params)
         sync_type = external_system_params_hash['sync_type']
         site_slug = external_system_params_hash['site_slug']
-        if sync_type == 'mark_as_attended_to_all_events_on_date'
-          rows = batch_members
-        else
-          rows = ActiveModel::Serializer::CollectionSerializer.new(
-            batch_members,
-            serializer: NationBuilderMemberSyncPushSerializer
-          ).as_json
-        end
+        rows = ActiveModel::Serializer::CollectionSerializer.new(
+          batch_members,
+          serializer: NationBuilderMemberSyncPushSerializer
+        ).as_json
         IdentityNationBuilder::API.send(sync_type, site_slug, rows, *sync_type_item(external_system_params_hash)) do |write_result_count, member_ids|
           if sync_type === 'tag'
             member_ids.each do |member_id|
               member = Member.find(member_id[:identity_id])
-              member.update_external_id(SYSTEM_NAME, member_id[:nationbuilder_id], {sync_id: sync_id}) if member
+              member.update_external_id(SYSTEM_NAME, member_id[:nationbuilder_id])
             end
           end
 
@@ -52,8 +48,6 @@ module IdentityNationBuilder
       [external_system_params_hash['event_id'], external_system_params_hash['mark_as_attended'], external_system_params_hash['recruiter_id']]
     when 'tag'
       [external_system_params_hash['tag']]
-    when 'mark_as_attended_to_all_events_on_date'
-      []
     end
   end
 
@@ -125,6 +119,10 @@ module IdentityNationBuilder
         subsystem: nb_event["site_slug"],
         external_id: nb_event["id"]
       )
+
+      if event.campaign == nil
+        event.campaign = Campaign.find(Settings.nation_builder.default_event_campaign_id)
+      end
 
       event.update!(
         name: nb_event['name'],
@@ -209,7 +207,6 @@ module IdentityNationBuilder
     end
 
     recruiters = IdentityNationBuilder::API.recruiters
-    Sidekiq.redis { |r| r.set 'nationbuilder:recruiters', recruiters.to_json}
     yield(
       recruiters.size,
       recruiters,
