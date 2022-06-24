@@ -2,42 +2,8 @@ require 'nationbuilder'
 
 module IdentityNationBuilder
   class API
-    def self.rsvp(site_slug, members, event_id, mark_as_attended=false, recruiter_id=nil)
-      member_ids = members.map do |member|
-        identity_id = member[:id]
-        member = member.except(:id, :nationbuilder_id)
-        person = find_or_create_person(member)
-        response = rsvp_person(site_slug, event_id, person, mark_as_attended, recruiter_id)
-        if !response.try(:[], 'rsvp') && mark_as_attended
-          pager = NationBuilder::Paginator.new(get_api_client, event_rsvps(site_slug, event_id))
-          rsvp = pager.body['results'].select { |result| result['person_id'] == person['id'] }.first
-          if rsvp && !rsvp['attended']
-            api(
-              :events, :rsvp_update, {
-                rsvp_id: rsvp['id'],
-                event_id: rsvp['event_id'],
-                site_slug: site_slug,
-                rsvp: { attended: mark_as_attended, person_id: rsvp['person_id'] }
-              })
-          end
-        end
-
-        { identity_id: identity_id, nationbuilder_id: person['id'] }
-      end
-      yield member_ids.length, member_ids
-    end
-
-    def self.tag(site_slug, members, tag)
-      list_id = create_list(tag)['id']
-      member_ids = members.map do |member|
-        identity_id = member[:id]
-        member = member.except(:id, :nationbuilder_id)
-        { identity_id: identity_id, nationbuilder_id: find_or_create_person(member)['id'] }
-      end
-      nationbuilder_ids = member_ids.map { |member| member[:nationbuilder_id] }
-      add_people_list(list_id, nationbuilder_ids)
-      tag_list(list_id, tag)
-      yield member_ids.length, member_ids
+    def self.to_slug(name)
+      slug = name.parameterize(separator: "_")
     end
 
     def self.sites
@@ -99,13 +65,92 @@ module IdentityNationBuilder
       api(:events, :rsvps, { site_slug: site_slug, id: event_id, per_page: 100 })
     end
 
-    def self.find_or_create_person(member)
-      person = find_person_by_mobile_or_phone(member)
-      person ? person : upsert_person(member)
+    def self.person_upsert(id_member)
+      id_data = PersonSerializer.new(id_member)
+      nb_id = id_member.member_external_ids.with_system(SYSTEM_NAME).first&.external_id
+      person_data = nil
+
+      if nb_id != nil
+        # Member has an NB id already, so just fetch that.
+        #
+        # XXX what about multiple NB ids?
+        #
+        # Id external ids are strings, the NB API returns ints though, so
+        # keep the id consistent with NB.
+        nb_id = Integer(nb_id)
+        person_data = api(:people, :show, { id: nb_id })['person']
+      else
+        # Don't know the member's NB id, so need to try to find
+        # them. Search by email first since that's the best indicator
+        # to match data on, then try the phones
+
+        response = {}
+
+        if id_member.email.present?
+          response = api(:people, :match, { email: id_member.email })
+        end
+
+        if !response.has_key?('person') && id_data.mobile.present?
+          response = api(:people, :match, { mobile: id_data[:mobile] })
+        end
+
+        if !response.has_key?('person') && id_data.phone.present?
+          response = api(:people, :match, { phone: id_data[:phone] })
+        end
+
+        if response.has_key?('person')
+          person_data = response['person']
+          nb_id = person_data['id']
+        end
+      end
+
+      if person_data
+        # Have or found a NB person that is associated with the Id
+        # member.
+        #
+        # If there is no NB external system id already present on the
+        # Id member, assume the two records have not been synchronised
+        # before, and perform a full merge. That is, if both records
+        # have a different value, use the most recently updated
+        # record's value, but if one record does not have a value and
+        # the other does, always use that value (disregarding which
+        # was most recently updated), so no data is lost.
+        #
+        # If there is a NB external system id present, assume the two
+        # have been merged merged already and always use the more
+        # recent values for each attribute.
+        #
+        # Finally, only do this work if the data does not match, to
+        # avoid uncessary work and help acheive a steady state
+        if id_data != person_data
+          upsert_type = :overwrite
+
+          if !id_member.member_external_ids.with_system(SYSTEM_NAME).first.present?
+            upsert_type = :merge
+            # set the external id here so UpsertService can find the
+            # member
+            id_member.update_external_id(SYSTEM_NAME, nb_id)
+          end
+
+          id_data.upsert_from_person(person_data, upsert_type)
+
+          if id_data != person_data
+            # Id and NB person data still doesn't match, so
+            # some more recent updates. Push these to NB.
+            api(:people, :update, { id: nb_id, person: id_data.as_json } )['person']['id']
+          end
+        end
+      else
+        # Don't have an NB id and couldn't find one, so create them in NB
+        nb_id = api(:people, :create, { person: id_data })['person']['id']
+        id_member.update_external_id(SYSTEM_NAME, nb_id)
+      end
+
+      nb_id
     end
 
-    def self.rsvp_person(site_slug, event_id, person, attended=false, recruiter_id=nil)
-      rsvp_data = { person_id: person['id'] }
+    def self.rsvp_person(site_slug, event_id, person_id, attended=false, recruiter_id=nil)
+      rsvp_data = { person_id: person_id }
       rsvp_data[:attended] = true if attended
       rsvp_data[:recruiter_id] = recruiter_id if recruiter_id
       api(:events, :rsvp_create, { id: event_id, site_slug: site_slug, rsvp: rsvp_data })
@@ -129,22 +174,32 @@ module IdentityNationBuilder
       list_results
     end
 
-    def self.lists
-      api(:lists, :index, { per_page: 100 })
+    def self.list_find(name)
+      id = nil
+      api(:lists, :index, { per_page: 100 })['results'].each do |result|
+        if result['name'] == name
+          id = result['id']
+          break
+        end
+      end
+      raise RuntimeError, 'no such list with slug: #{slug}' unless id
+      id
     end
 
-    def self.create_list(tag)
-      slug = "tempid_#{SecureRandom.hex(11)}"
-      name = "Temp list for tag - #{tag}"
-      api(:lists, :create, { list: { name: name, slug: slug, author_id: Settings.nation_builder.author_id } })['list_resource']
+    def self.list_create(name)
+      slug = to_slug(name)
+      api(:lists, :create,
+          { list: {
+              name: name,
+              slug: slug,
+              author_id: Settings.nation_builder.author_id
+            }
+          }
+         )['list_resource']['id']
     end
 
-    def self.add_people_list(list_id, member_ids)
-      api(:lists, :add_people, { list_id: list_id, people_ids: member_ids })
-    end
-
-    def self.tag_list(list_id, tag)
-      api(:lists, :add_tag, { list_id: list_id, tag: URI.encode_www_form_component(tag) })
+    def self.list_add_people(list_id, member_ids)
+      api(:lists, :add_people, { list_id: list_id, people_ids: member_ids })['id']
     end
 
     def self.recruiters
@@ -161,42 +216,9 @@ module IdentityNationBuilder
 
     private
 
-    def self.find_person_by_mobile_or_phone(member)
-      phone_to_lookup = member[:mobile].present? ? member[:mobile] : member[:phone]
-      if phone_to_lookup.present?
-        phone_to_lookup = strip_leading_zero(phone_to_lookup)
-        phone_type = is_mobile?(phone_to_lookup) ? "mobile" : "phone"
-        response = api(:people, :match, { phone_type => phone_to_lookup })
-        matched_person = response['person']
-        return matched_person if matched_person
-      end
-    end
-
-    def self.strip_leading_zero(phone)
-      phone.gsub(/^0/, '')
-    end
-
     def self.is_mobile?(phone)
       mobile_prefix = Settings.options.default_mobile_phone_national_destination_code.to_s
       mobile_prefix && phone =~ /^#{mobile_prefix}/
-    end
-
-    def self.upsert_person(member)
-      begin
-        upsert_person_without_retry(member)
-      rescue NationBuilder::ClientError => response
-        validation_errors = JSON.parse(response.message)['validation_errors']
-        if validation_errors.try(:first).try(:match, /should look like an email address/)
-          upsert_person_without_retry(member.except(:email))
-        else
-          raise response
-        end
-      end
-    end
-
-
-    def self.upsert_person_without_retry(member)
-      api(:people, :add, { person: member })['person']
     end
 
     def self.api(endpoint, method, params)
